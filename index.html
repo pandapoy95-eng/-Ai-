@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>هوش مصنوعی کوچولو</title>
+
+<style>
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(
+    to bottom left,
+    #f800ff,
+    #a400ff,
+    #c440ff
+  );
+}
+</style>
+</head>
+
+<body>
+
+<input id="q" placeholder="بنویس"
+ onkeydown="if(event.key==='Enter') go()">
+
+<button onclick="go()">ارسال</button>
+<p id="a"></p>
+
+<button onclick="clearAnswer()">پاک‌کردن پاسخ</button>
+<script>
+let oldAnswer = localStorage.getItem("lastAnswer") || "";
+document.getElementById("a").innerText = oldAnswer;
+
+function go() {
+  let q = document.getElementById("q").value.trim();
+  document.getElementById("q").value = "";
+
+  let a = document.getElementById("a");
+
+  q = q.replace(/\s+/g, "");
+
+  let answered = false;
+  a.innerText = "";
+
+  if (q.includes("سلام")) {
+    a.innerText += "سلام رفیق";
+    answered = true;
+  }
+
+  if (q.includes("خوبی")) {
+    a.innerText += " من خوبم!";
+    answered = true;
+  }
+  else if (q == "تو") {
+    a.innerText = "من هوش مصنوعی خیلی کوچولو هستم";
+    answered = true;
+  }
+  else if (q == "چکارمیکنی") {
+    a.innerText = "دارم به سوالات پاسخ میدم دیگه";
+    answered = true;
+  }
+
+  if (!answered) {
+    a.innerText = "نمی‌دونم!";
+  }
+
+  localStorage.setItem("lastAnswer", a.innerText);
+}
+
+
+function clearAnswer() {
+  document.getElementById("a").innerText = "";
+  localStorage.removeItem("lastAnswer");
+}
+</script>
+
+</body>
+</html>    
