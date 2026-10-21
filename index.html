@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>هوش مصنوعی کوچولو</title>
+<h3 style="color:green">پویایai ورژن جدیدرونمایی میکند</h3>
+<style>
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+#history p {
+  background: #323363;
+  color: white;
+  padding: 5px;
+  border-radius: 5px;
+  margin: 3px 0;
+  width: fit-content;
+  max-width: 80%;
+  overflow-wrap: anywhere;
+}#learnedBox div {
+  background: #323363;
+  color: white;
+  padding: 5px;
+  border-radius: 5px;
+  margin: 3px 0;
+  width: fit-content;
+  max-width: 80%;
+  overflow-wrap: anywhere;
+}
+#learnedBox button {
+  margin-right: 8px;
+}#settingsBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 20px;
+  z-index: 10;
+}
+#settings {
+  position: fixed;
+  top: 50px;
+  left: 10px;
+  width: 300px;
+  max-width: 85vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #1c1d3d;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 10;
+}#newsBtn {
+  position: fixed;
+  top: 10px;
+  left: 50px;
+  font-size: 20px;
+  z-index: 10;
+}
+#news {
+  position: fixed;
+  top: 50px;
+  left: 10px;
+  width: 300px;
+  max-width: 85vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #1c1d3d;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 11;
+}
+</style>
+</head>
+<body><button id="settingsBtn" onclick="toggleSettings()">⚙️</button>
+
+<div id="settings" style="display:none">
+  <h3>تنظیمات</h3>
+  <button onclick="toggleSettings()">بستن</button>
+  <h4>ظاهر</h4>
+<label>رنگ اول <input type="color" id="myColor"></label>
+<br>
+<label>رنگ دوم <input type="color" id="color2"></label>
+<h4>حافظه</h4>
+<div id="learnedBox"></div>
+<button onclick="clearLearned()">پاک‌کردن همه</button>
+
+<h4>گفتگو</h4>
+<button onclick="clearAnswer()">پاک‌کردن تاریخچه</button>
+</div>
+<input id="q" placeholder="بنویس"
+onkeydown="if(event.key==='Enter') go()">
+<button onclick="go()">ارسال</button>
+
+
+<div id="history"></div>
+
+<button id="newsBtn" onclick="toggleNews()">🆕</button>
+
+<div id="news" style="display:none">
+  <h3>تغییرات نسخهٔ ۲</h3>
+  <button onclick="toggleNews()">بستن</button>
+  <ul>
+    <li>پنل تنظیمات (دکمهٔ ⚙) برای رنگ‌ها و مدیریت حافظه</li>
+    <li>یادگیری از کاربر: اگر جواب را ندانم، بهم یاد بده</li>
+    <li>حذف تک‌تک چیزهای یادگرفته‌شده یا پاک‌کردن همه</li>
+      <li>باهوش تر شدن و ساپورت از کلمات بیشتر</li>
+    <li>بازی ۲۰ سوالی: بنویس «۲۰ سوالی»</li>
+    <li>ذخیرهٔ اسم: بنویس «اسمم ... هست»</li>
+    <li>سلام و خداحافظی با اسم و ساعت روز</li>
+    <li>تایپ تدریجی جواب‌ها</li>
+  </ul>
+</div>
+<script>
+let historyBox = document.getElementById("history");
+
+let messages = [];
+try {
+  messages = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+} catch (e) {
+  messages = [];
+}
+
+
+function cleanText(text) {
+  return text
+    .replace(/[\u200c\u200f\u200e]/g, "")
+    .replace(/[؟?!.،]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function showHistory() {
+  historyBox.innerHTML = "";
+  messages.forEach(function(message) {
+    let p = document.createElement("p");
+    p.innerText = message;
+    historyBox.appendChild(p);
+  });
+}
+
+function remember(key, value) {
+  localStorage.setItem("memory_" + key, value);
+}
+
+function recall(key) {
+  return localStorage.getItem("memory_" + key) || "";
+}
+
+function timeGreeting() {
+  let h = new Date().getHours();
+  if (h >= 5 && h < 12) return "صبح بخیر";
+  if (h >= 12 && h < 17) return "ظهر بخیر";
+  if (h >= 17 && h < 21) return "عصر بخیر";
+  return "شب بخیر";
+}
+let learned = {};
+try {
+  learned = JSON.parse(localStorage.getItem("learned") || "{}");
+} catch (e) {
+  learned = {};
+}
+let pendingQuestion = "";
+
+
+let items = [
+  { name: "گربه", tags: ["جاندار", "حیوان", "پشمالو", "خانگی", "چهارپا"] },
+  { name: "سیب", tags: ["خوراکی", "میوه", "قرمز", "گرد", "شیرین"] },
+  { name: "ماشین", tags: ["وسیله", "چرخ", "موتور", "سریع"] },
+  { name: "ماهی", tags: ["جاندار", "حیوان", "آب", "خوراکی"] },
+  { name: "موز", tags: ["خوراکی", "میوه", "زرد", "شیرین"] }
+];
+let allTags = [...new Set(items.flatMap(i => i.tags))];
+let gameMode = false;
+let secret = null;
+let questionCount = 0;
+let typingTimer = null;
+
+function typeLast(text) {
+  clearInterval(typingTimer);
+  let ps = historyBox.querySelectorAll("p");
+  let last = ps[ps.length - 1];
+  if (!last) return;
+  let prefix = "هوش مصنوعی: ";
+  let i = 0;
+  last.innerText = prefix;
+  typingTimer = setInterval(function() {
+    i++;
+    last.innerText = prefix + text.slice(0, i);
+    window.scrollTo(0, document.body.scrollHeight);
+    if (i >= text.length) clearInterval(typingTimer);
+  }, 30);
+}
+function go() {
+  let input = document.getElementById("q");
+  let originalQ = input.value.trim();
+  if (originalQ === "") return;
+  input.value = "";
+  let q = cleanText(originalQ);
+  let a = { innerText: "" };
+  let answered = false;
+  let lastTopic = localStorage.getItem("lastTopic") || "";
+
+  if (pendingQuestion) {
+    if (q === "ولشکن" || q === "بیخیال") {
+      a.innerText = "باشه، بیخیال 😅";
+    } else {
+      learned[pendingQuestion] = originalQ;
+      localStorage.setItem("learned", JSON.stringify(learned));
+      a.innerText = "یاد گرفتم! 🧠";
+    }
+    pendingQuestion = "";
+    answered = true;
+  }
+ 
+  else if (gameMode) {
+    if (q === "تسلیم") {
+      a.innerText = "جوابم «" + secret.name + "» بود 😎";
+      gameMode = false;
+    }
+    else if (q.includes(cleanText(secret.name))) {
+      a.innerText = "آفرین، درست حدس زدی 🎉 با " + questionCount + " سوال";
+      gameMode = false;
+    }
+    else {
+      let tag = allTags.find(t => q.includes(t));
+      if (!tag) {
+        a.innerText = "نفهمیدم 🤔 یه سوال بله/خیر بپرس، مثلاً «خوراکیه؟»";
+      } else {
+        questionCount++;
+        a.innerText = secret.tags.includes(tag) ? "بله ✅" : "نه ❌";
+        if (questionCount >= 20) {
+          a.innerText += " — سوال‌هات تموم شد! جوابم «" + secret.name + "» بود 😎";
+          gameMode = false;
+        }
+      }
+    }
+    answered = true;
+  }
+
+  else if (q.includes("اسممنچیه") || q.includes("اسممچیه")) {
+    a.innerText = recall("name") || "هنوز اسمت رو بهم نگفتی 😊";
+    answered = true;
+  }
+  else if (q.startsWith("اسمم")) {
+    let name = originalQ
+      .replace(/اسم من|اسممن|اسمم/g, "")
+      .replace(/\s*(هست|ه)\s*$/, "")
+      .trim();
+    if (name) {
+      remember("name", name);
+      a.innerText = "خوشبختم " + name + " 😊 یادم می‌مونه!";
+      answered = true;
+    }
+  }
+  
+  else if (q.includes("منچیگفتم") || q.includes("چیگفتم")) {
+    let lastMessage = messages.filter(m => m.startsWith("تو: "));
+    if (lastMessage.length > 0) {
+      a.innerText = lastMessage[lastMessage.length - 1].replace("تو: ", "");
+    } else {
+      a.innerText = "هنوز پیام قبلی‌ای نداری 😊";
+    }
+    answered = true;
+  }
+  else if (q.includes("اون") && lastTopic !== "") {
+    a.innerText = lastTopic;
+    answered = true;
+  }
+  else if (q.includes("سلام")) {
+    let name = recall("name");
+    let replies = name
+      ? [
+          "سلام " + name + "!",
+          "سلامممممممم " + name,
+          "درود " + name + "، " + timeGreeting()
+        ]
+      : [
+          "سلام رفیق",
+          "سلامممممممم",
+          "درود، " + timeGreeting()
+        ];
+    a.innerText = replies[Math.floor(Math.random() * replies.length)];
+    answered = true;
+  }
+    else if (q.includes("خداحافظ") || q.includes("بای")) {
+    let name = recall("name");
+    a.innerText = name ? "خداحافظ " + name + "، زود برگرد!" : "خداحافظ رفیق، زود برگرد!";
+    answered = true;
+  }
+  else if (q.includes("خوبی") || q.includes("حالتچطوره") || q.includes("چطوری")) {
+    a.innerText = "من خوبم رفیق 😊 تو چطوری؟";
+    answered = true;
+  }
+  else if (q === "تو") {
+    a.innerText = "من هوش مصنوعی خیلی کوچولو هستم";
+    answered = true;
+  }
+  else if (q === "چکارمیکنی") {
+    a.innerText = "دارم به سوالات پاسخ میدم دیگه";
+    answered = true;
+  }
+  else if (q === "زنبورسفیده") {
+    a.innerText = "نه خب قطعاً زرد و مشکیه 😐";
+    answered = true;
+  }
+    else if (q === "بیابریمبازی") {
+    a.innerText = "بنویس ۲۰ سوالی بریممممممم بازی";
+    answered = true;
+  }
+  else if ( q === "20سوالی" || q === "۲۰سوالی") {
+    secret = items[Math.floor(Math.random() * items.length)];
+    gameMode = true;
+    questionCount = 0;
+    a.innerText = "یه چیز تو ذهنم گرفتم 🤫 سوال بله/خیر بپرس. ۲۰ تا فرصت داری. هر وقت خواستی بنویس «تسلیم»";
+    answered = true;
+  }
+  else if (
+  q.includes("خوبم") ||
+  q.includes("عالی") ||
+  q.includes("بینظیر")
+) {
+  a.innerText = "خدارا شکر که خوبی 😇😊";
+  answered = true;
+}
+  else if (q.includes("مرسی") || q.includes("دمتگرم") || q.includes("افرین")) {
+    a.innerText = "خواهش میکنم رفیق 😊";
+    answered = true;
+  }
+  else if (q.includes("ببخشید") || q.includes("معذرت") || q.includes("شرمنده")) {
+    a.innerText = "اشکالی نداره حق داری 🥲";
+    answered = true;
+  }
+  else if (q.includes("نهه") || q.includes("نمیخوام") || q.includes("نیستم") || q.includes("اهه")) {
+    a.innerText = "ناراحت یا عصبانی نباش 🫠🙃";
+    answered = true;
+  }
+  else if (q.includes("اسمتچیه") || q.includes("توکیهستی") || q.includes("چیهستی") || q.includes("توکی")) {
+    a.innerText = "من ورژن ۲ پویای ai هستم یکی از پیشرفته ترین ورژن ها";
+    answered = true;
+  }
+
+ 
+  if (!answered && learned[q]) {
+    a.innerText = learned[q];
+    answered = true;
+  }
+
+
+  if (!answered) {
+    pendingQuestion = q;
+    a.innerText = "نمی‌دونم! 😅 جوابش چیه؟ بهم یاد بده (یا بنویس «ولش کن»)";
+  }
+
+  if (!q.includes("اون") && !q.includes("چیگفتم") && !q.includes("منچیگفتم")) {
+    lastTopic = originalQ;
+    localStorage.setItem("lastTopic", lastTopic);
+  }
+
+  localStorage.setItem("lastAnswer", a.innerText);
+  messages.push("تو: " + originalQ);
+  messages.push("هوش مصنوعی: " + a.innerText);
+  localStorage.setItem("chatHistory", JSON.stringify(messages));
+    showHistory();
+  typeLast(a.innerText);
+}
+
+function clearAnswer() {
+   clearInterval(typingTimer); document.getElementById("a").innerText = "";
+  localStorage.removeItem("lastAnswer");
+  localStorage.removeItem("lastTopic");
+  messages = [];
+  localStorage.removeItem("chatHistory");
+  showHistory();
+}function toggleLearned() {
+  let box = document.getElementById("learnedBox");
+  if (box.style.display === "none") {
+    showLearned();
+    box.style.display = "block";
+  } else {
+    box.style.display = "none";
+  }
+}
+
+function clearAnswer() {
+  clearInterval(typingTimer);
+  localStorage.removeItem("lastAnswer");
+  localStorage.removeItem("lastTopic");
+  messages = [];
+  localStorage.removeItem("chatHistory");
+  showHistory();
+}
+function showLearned() {
+  let box = document.getElementById("learnedBox");
+  box.innerHTML = "";
+  let keys = Object.keys(learned);
+
+  if (keys.length === 0) {
+    box.innerText = "هنوز چیزی یاد نگرفته‌ام";
+    return;
+  }
+
+  keys.forEach(function(key) {
+    let row = document.createElement("div");
+    row.innerText = key + " ← " + learned[key];
+
+    let del = document.createElement("button");
+    del.innerText = "حذف";
+    del.onclick = function() {
+      delete learned[key];
+      localStorage.setItem("learned", JSON.stringify(learned));
+      showLearned();
+    };
+
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+function toggleSettings() {
+  let panel = document.getElementById("settings");
+  if (panel.style.display === "none") {
+    showLearned();
+    panel.style.display = "block";
+  } else {
+    panel.style.display = "none";
+  }
+}
+function toggleNews() {
+  let box = document.getElementById("news");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+  localStorage.setItem("newsSeen", "yes");
+}
+
+if (!localStorage.getItem("newsSeen")) {
+  document.getElementById("news").style.display = "block";
+}
+function clearLearned() {
+  learned = {};
+  localStorage.setItem("learned", JSON.stringify(learned));
+  showLearned();
+}
+let color1 = document.getElementById("myColor");
+let color2 = document.getElementById("color2");
+
+color1.value = localStorage.getItem("color1") || "#511b1e";
+color2.value = localStorage.getItem("color2") || "#aab5ff";
+
+function changeGradient() {
+  document.body.style.background =
+    `linear-gradient(to bottom left, ${color1.value}, ${color2.value})`;
+  localStorage.setItem("color1", color1.value);
+  localStorage.setItem("color2", color2.value);
+}
+
+color1.oninput = changeGradient;
+color2.oninput = changeGradient;
+changeGradient();
+
+</script>
+</body>
+  </html>
